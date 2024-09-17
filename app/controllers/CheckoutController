@@ -1,0 +1,48 @@
+<?php
+
+class CheckoutController extends Controller {
+
+    public function index() {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "auth/login");
+            exit();
+        }
+
+        $cartModel = $this->loadModel('Cart');
+        $cartItems = $cartModel->getCartItems($_SESSION['user_id']);
+
+        if (empty($cartItems)) {
+            echo "Your cart is empty!";
+            return;
+        }
+
+        $this->renderView('checkout/index', ['cartItems' => $cartItems]);
+    }
+
+    public function placeOrder() {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "auth/login");
+            exit();
+        }
+
+        $cartModel = $this->loadModel('Cart');
+        $orderModel = $this->loadModel('Order');
+
+        $cartItems = $cartModel->getCartItems($_SESSION['user_id']);
+        $totalAmount = array_sum(array_column($cartItems, 'price'));
+
+        // Assuming the form collects shipping information from the user
+        $shippingAddress = $_POST['shipping_address'];
+
+        $orderId = $orderModel->placeOrder($_SESSION['user_id'], $cartItems, $totalAmount, $shippingAddress);
+
+        header("Location: " . BASE_URL . "checkout/success/" . $orderId);
+    }
+
+    public function success($orderId) {
+        $orderModel = $this->loadModel('Order');
+        $orderDetails = $orderModel->getOrderDetails($orderId);
+
+        $this->renderView('checkout/success', ['orderDetails' => $orderDetails]);
+    }
+}
